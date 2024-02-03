@@ -24,10 +24,10 @@ func CreateBF(numOfElements uint, falsePositive float64) *BloomFilter {
 	return &filter
 }
 
-func GenerateHashFunctions(k uint) ([]hash.Hash32, uint) {
+func GenerateHashFunctions(numOfHashFunctions uint) ([]hash.Hash32, uint) {
 	var hashFuncs []hash.Hash32
 	seconds := uint(time.Now().Unix())
-	for i := uint(0); i < k; i++ {
+	for i := uint(0); i < numOfHashFunctions; i++ {
 		hashFuncs = append(hashFuncs, murmur3.New32WithSeed(uint32(seconds+1)))
 	}
 	return hashFuncs, seconds
@@ -53,9 +53,9 @@ func HashTheKey(hashFunction hash.Hash32, key string, sizeOfFilter uint) uint32 
 	return index
 }
 
-func CopyHashFunctions(k uint, seconds uint) []hash.Hash32 {
+func CopyHashFunctions(numOfHashFunctions uint, seconds uint) []hash.Hash32 {
 	var hashFuncs []hash.Hash32
-	for i := uint(0); i < k; i++ {
+	for i := uint(0); i < numOfHashFunctions; i++ {
 		hashFuncs = append(hashFuncs, murmur3.New32WithSeed(uint32(seconds+1)))
 	}
 	return hashFuncs
