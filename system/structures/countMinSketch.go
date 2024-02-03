@@ -1,8 +1,10 @@
 package structures
 
 import (
+	"github.com/spaolacci/murmur3"
 	"hash"
 	"math"
+	"time"
 )
 
 type CountMinSketch struct {
@@ -21,4 +23,23 @@ func EvaluateMForCMS(epsilon float64) uint {
 
 func EvaluateKForCMS(delta float64) uint {
 	return uint(math.Ceil(math.Log(1 / delta)))
+}
+
+func GenerateHashFunctionsForCMS(numOfHashFunctions uint) ([]hash.Hash32, uint) {
+	var hashFuncs []hash.Hash32
+	seconds := uint(time.Now().Unix())
+	for i := uint(0); i < numOfHashFunctions; i++ {
+		hashFuncs = append(hashFuncs, murmur3.New32WithSeed(uint32(seconds+1)))
+	}
+	return hashFuncs, seconds
+}
+
+func HashTheKeyForCMS(hashFunction hash.Hash32, key string, sizeOfFilter uint) uint32 {
+	_, err := hashFunction.Write([]byte(key))
+	if err != nil {
+		panic(err)
+	}
+	index := hashFunction.Sum32() % uint32(sizeOfFilter)
+	hashFunction.Reset()
+	return index
 }
