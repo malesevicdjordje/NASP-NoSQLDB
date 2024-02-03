@@ -52,3 +52,11 @@ func HashTheKey(hashFunction hash.Hash32, key string, sizeOfFilter uint) uint32 
 	hashFunction.Reset()
 	return index
 }
+
+func CopyHashFunctions(k uint, seconds uint) []hash.Hash32 {
+	var hashFuncs []hash.Hash32
+	for i := uint(0); i < k; i++ {
+		hashFuncs = append(hashFuncs, murmur3.New32WithSeed(uint32(seconds+1)))
+	}
+	return hashFuncs
+}
