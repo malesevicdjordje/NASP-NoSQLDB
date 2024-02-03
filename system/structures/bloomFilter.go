@@ -82,20 +82,6 @@ func CopyHashFunctions(numOfHashFunctions uint, seconds uint) []hash.Hash32 {
 	return hashFuncs
 }
 
-func writeBF(filepath string, filter *BloomFilter) {
-	f, err := os.Create(filepath)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	encoder := gob.NewEncoder(f)
-	err = encoder.Encode(filter)
-	if err != nil {
-		panic(err)
-	}
-}
-
 func readBF(filepath string) (filter *BloomFilter) {
 	f, err := os.Open(filepath)
 	if err != nil {
@@ -120,4 +106,18 @@ func readBF(filepath string) (filter *BloomFilter) {
 	}
 	filter.hashFunctions = CopyHashFunctions(filter.K, filter.TimeSeconds)
 	return
+}
+
+func writeBF(filepath string, filter *BloomFilter) {
+	f, err := os.Create(filepath)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	encoder := gob.NewEncoder(f)
+	err = encoder.Encode(filter)
+	if err != nil {
+		panic(err)
+	}
 }
