@@ -33,8 +33,33 @@ func CreateSimHash() SimHash {
 	return SimHash{mapWordsStop}
 }
 
+func (*SimHash) Hemingway(text1 Text, text2 Text) int {
+	fingerprint1 := text1.fingerprint
+	fingerprint2 := text2.fingerprint
+	fingerprint := make([]int, 256, 256)
+
+	for i := 0; i < 256; i++ {
+		fingerprint[i] = fingerprint1[i] ^ fingerprint2[i]
+	}
+
+	hemingway := 0
+	for _, value := range fingerprint {
+		if value == 1 {
+			hemingway++
+		}
+	}
+	return hemingway
+}
+
 type Text struct {
 	fingerprint []int
+}
+
+func GenerateText(filepath string, simHash SimHash) Text {
+	mapWordsOccurencies := CalculateNumOfWords(filepath, simHash)
+	hashedWords := HashWords(mapWordsOccurencies)
+	fingerprint := SumHashesWords(hashedWords)
+	return Text{fingerprint}
 }
 
 func CalculateNumOfWords(filepath string, simHash SimHash) map[string]int {
