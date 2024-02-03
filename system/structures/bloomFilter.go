@@ -43,6 +43,25 @@ func EvaluateM(numOfElements int, falsePositive float64) uint {
 	return uint(math.Ceil(float64(numOfElements) * math.Abs(math.Log(falsePositive)) / math.Pow(math.Log(2), float64(2))))
 }
 
+// Dodavanje elementa u bloom filter
+func (bloomFilter *BloomFilter) Add(element Element) {
+	for _, hashFunction := range bloomFilter.hashFunctions {
+		i := HashTheKey(hashFunction, element.Key, bloomFilter.M)
+		bloomFilter.Set[i] = 1
+	}
+}
+
+// Pretraga elementa u bloom filteru
+func (bloomFilter *BloomFilter) Search(key string) bool {
+	for _, hashFunction := range bloomFilter.hashFunctions {
+		i := HashTheKey(hashFunction, key, bloomFilter.M)
+		if bloomFilter.Set[i] != 1 {
+			return false
+		}
+	}
+	return true
+}
+
 func HashTheKey(hashFunction hash.Hash32, key string, sizeOfFilter uint) uint32 {
 	_, err := hashFunction.Write([]byte(key))
 	if err != nil {
