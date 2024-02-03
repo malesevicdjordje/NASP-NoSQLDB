@@ -16,6 +16,14 @@ type BloomFilter struct {
 	TimeSeconds   uint          // vreme u sekundama od 1.1.1970
 }
 
+func CreateBF(numOfElements uint, falsePositive float64) *BloomFilter {
+	sizeOfFilter := EvaluateM(int(numOfElements), falsePositive)
+	numOfHashFunctions := EvaluateK(int(numOfElements), sizeOfFilter)
+	hashFs, seconds := GenerateHashFunctions(numOfHashFunctions)
+	filter := BloomFilter{Set: make([]byte, sizeOfFilter), hashFunctions: hashFs, K: numOfHashFunctions, M: sizeOfFilter, P: falsePositive, TimeSeconds: seconds}
+	return &filter
+}
+
 func GenerateHashFunctions(k uint) ([]hash.Hash32, uint) {
 	var hashFuncs []hash.Hash32
 	seconds := uint(time.Now().Unix())
@@ -35,10 +43,12 @@ func EvaluateM(numOfElements int, falsePositive float64) uint {
 	return uint(math.Ceil(float64(numOfElements) * math.Abs(math.Log(falsePositive)) / math.Pow(math.Log(2), float64(2))))
 }
 
-func CreateBF(numOfElements uint, falsePositive float64) *BloomFilter {
-	sizeOfFilter := EvaluateM(int(numOfElements), falsePositive)
-	numOfHashFunctions := EvaluateK(int(numOfElements), sizeOfFilter)
-	hashFs, seconds := GenerateHashFunctions(numOfHashFunctions)
-	filter := BloomFilter{Set: make([]byte, sizeOfFilter), hashFunctions: hashFs, K: numOfHashFunctions, M: sizeOfFilter, P: falsePositive, TimeSeconds: seconds}
-	return &filter
+func HashTheKey(hashFunction hash.Hash32, key string, sizeOfFilter uint) uint32 {
+	_, err := hashFunction.Write([]byte(key))
+	if err != nil {
+		panic(err)
+	}
+	index := hashFunction.Sum32() % uint32(sizeOfFilter)
+	hashFunction.Reset()
+	return index
 }
