@@ -19,8 +19,8 @@ type BloomFilter struct {
 }
 
 func CreateBF(numOfElements uint, falsePositive float64) *BloomFilter {
-	sizeOfFilter := EvaluateM(int(numOfElements), falsePositive)
-	numOfHashFunctions := EvaluateK(int(numOfElements), sizeOfFilter)
+	sizeOfFilter := EvaluateMForBloomF(int(numOfElements), falsePositive)
+	numOfHashFunctions := EvaluateKForBloomF(int(numOfElements), sizeOfFilter)
 	hashFs, seconds := GenerateHashFunctions(numOfHashFunctions)
 	filter := BloomFilter{Set: make([]byte, sizeOfFilter), hashFunctions: hashFs, K: numOfHashFunctions, M: sizeOfFilter, P: falsePositive, TimeSeconds: seconds}
 	return &filter
@@ -36,12 +36,12 @@ func GenerateHashFunctions(numOfHashFunctions uint) ([]hash.Hash32, uint) {
 }
 
 // Generise broj hash funkcija
-func EvaluateK(numOfElements int, sizeOfFilter uint) uint {
+func EvaluateKForBloomF(numOfElements int, sizeOfFilter uint) uint {
 	return uint(math.Ceil((float64(sizeOfFilter) / float64(numOfElements)) * math.Log(2)))
 }
 
 // Generise velicinu bloom filtera
-func EvaluateM(numOfElements int, falsePositive float64) uint {
+func EvaluateMForBloomF(numOfElements int, falsePositive float64) uint {
 	return uint(math.Ceil(float64(numOfElements) * math.Abs(math.Log(falsePositive)) / math.Pow(math.Log(2), float64(2))))
 }
 
