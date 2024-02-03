@@ -1,6 +1,8 @@
 package structures
 
 import (
+	"bytes"
+	"encoding/gob"
 	"math"
 )
 
@@ -62,4 +64,27 @@ func (hll *HyperLogLog) emptyRegistersCount() uint8 {
 		}
 	}
 	return numOfEmptyRegisters
+}
+
+func (hyperLogLog *HyperLogLog) SerializeHLL() []byte {
+
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	encoder.Encode(&hyperLogLog)
+	return buffer.Bytes()
+}
+
+func DeserializeHLL(data []byte) *HyperLogLog {
+
+	buffer := bytes.NewBuffer(data)
+	decoder := gob.NewDecoder(buffer)
+	hyperLogLog := new(HyperLogLog)
+
+	for {
+		err := decoder.Decode(&hyperLogLog)
+		if err != nil {
+			break
+		}
+	}
+	return hyperLogLog
 }
