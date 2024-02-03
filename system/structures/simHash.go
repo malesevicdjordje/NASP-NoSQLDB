@@ -19,3 +19,12 @@ func generateWordsStop() map[string]bool {
 type SimHash struct {
 	mapWordsStop map[string]bool
 }
+
+func CreateSimHash() SimHash {
+	mapWordsStop := generateWordsStop()
+	return SimHash{mapWordsStop}
+}
+
+type Text struct {
+	fingerprint []int
+}
