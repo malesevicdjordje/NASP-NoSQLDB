@@ -1,6 +1,8 @@
 package structures
 
 import (
+	"bytes"
+	"encoding/gob"
 	"github.com/spaolacci/murmur3"
 	"hash"
 	"math"
@@ -79,4 +81,39 @@ func HashTheKeyForCMS(hashFunction hash.Hash32, key string, sizeOfFilter uint) u
 	index := hashFunction.Sum32() % uint32(sizeOfFilter)
 	hashFunction.Reset()
 	return index
+}
+
+func CopyHashFunctionsForCMS(numOfHashFunctions uint, seconds uint) []hash.Hash32 {
+	var hashFuncs []hash.Hash32
+	for i := uint(0); i < numOfHashFunctions; i++ {
+		hashFuncs = append(hashFuncs, murmur3.New32WithSeed(uint32(seconds+1)))
+	}
+	return hashFuncs
+}
+
+func (countMinSketch *CountMinSketch) SerializeCMS() []byte {
+
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	err := encoder.Encode(countMinSketch)
+	if err != nil {
+		return nil
+	}
+	return buffer.Bytes()
+}
+
+func DeserializeCMS(data []byte) *CountMinSketch {
+
+	buffer := bytes.NewBuffer(data)
+	decoder := gob.NewDecoder(buffer)
+	countMinSketch := new(CountMinSketch)
+
+	for {
+		err := decoder.Decode(countMinSketch)
+		if err != nil {
+			break
+		}
+	}
+	countMinSketch.hashFunctions = CopyHashFunctionsForCMS(countMinSketch.K, countMinSketch.TimeSeconds)
+	return countMinSketch
 }
