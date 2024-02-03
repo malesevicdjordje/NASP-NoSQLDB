@@ -17,6 +17,19 @@ type CountMinSketch struct {
 	TimeSeconds   uint          // vreme u sekundama od 1.1.1970
 }
 
+func CreateCountMinSketch(epsilon float64, delta float64) *CountMinSketch {
+	k := EvaluateKForCMS(delta)
+	m := EvaluateMForCMS(epsilon)
+	hashFs, seconds := GenerateHashFunctionsForCMS(k)
+	set := make([][]int, k, k)
+	for i, _ := range set {
+		set[i] = make([]int, m, m)
+	}
+	cms := CountMinSketch{set, hashFs, k, m, epsilon, delta, seconds}
+	//fmt.Printf("Created Count Min Skatch with M = %d, K = %d\n", M, k)
+	return &cms
+}
+
 func EvaluateMForCMS(epsilon float64) uint {
 	return uint(math.Ceil(math.E / epsilon))
 }
@@ -32,6 +45,30 @@ func GenerateHashFunctionsForCMS(numOfHashFunctions uint) ([]hash.Hash32, uint) 
 		hashFuncs = append(hashFuncs, murmur3.New32WithSeed(uint32(seconds+1)))
 	}
 	return hashFuncs, seconds
+}
+
+func (countMinSketch *CountMinSketch) Add(key string) {
+	for i, hashFunction := range countMinSketch.hashFunctions {
+		j := HashTheKeyForCMS(hashFunction, key, countMinSketch.M)
+		countMinSketch.Set[i][j] += 1
+	}
+	//fmt.Printf("Element %s added !\n", key)
+}
+
+func (countMinSketch *CountMinSketch) Search(key string) int {
+	values := make([]int, countMinSketch.K, countMinSketch.K)
+	for i, hashFunction := range countMinSketch.hashFunctions {
+		j := HashTheKeyForCMS(hashFunction, key, countMinSketch.M)
+		values[i] = countMinSketch.Set[i][j]
+	}
+
+	minValue := values[0]
+	for _, value := range values {
+		if value < minValue {
+			minValue = value
+		}
+	}
+	return minValue
 }
 
 func HashTheKeyForCMS(hashFunction hash.Hash32, key string, sizeOfFilter uint) uint32 {
