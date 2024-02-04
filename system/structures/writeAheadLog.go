@@ -5,9 +5,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -163,4 +165,66 @@ func (wal *WriteAheadLog) PutElement(elem *Element) bool {
 		}
 	}
 	return true
+}
+
+func (wal *WriteAheadLog) ReadLatestSegment(path string) {
+	files, err := ioutil.ReadDir(WalPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for i := 0; i < len(files); i++ {
+		indexStr := strings.Split(files[i].Name(), "wal")[1]
+		indexStr = strings.Split(indexStr, ".log")[0]
+		index, err := strconv.ParseUint(indexStr, 10, 64)
+		if err != nil {
+			fmt.Println(err)
+		}
+		wal.segmentNames[index] = files[i].Name()
+	}
+
+	maxIndex := uint64(0)
+	for key := range wal.segmentNames {
+		if maxIndex < key {
+			maxIndex = key
+		}
+	}
+	index := maxIndex
+	current := wal.segmentNames[index]
+
+	file, err := os.Open(path + current)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	bufferedReader := bufio.NewReader(file)
+	info, err := os.Stat(file.Name())
+	if err != nil {
+		fmt.Println(err)
+	}
+	numBytes := info.Size()
+
+	bytes := make([]byte, numBytes)
+	_, err = bufferedReader.Read(bytes)
+
+	currentSegment := WalSegment{
+		index:    index,
+		data:     nil,
+		size:     0,
+		capacity: SegmentCapacity,
+	}
+	currentSegment.AppendData(bytes)
+
+	wal.currentSegment = &currentSegment
+	wal.segments = append(wal.segments, &currentSegment)
+
+	err = file.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
