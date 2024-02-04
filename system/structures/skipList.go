@@ -73,3 +73,45 @@ func (skipList *SkipList) Insert(key string, value []byte, isTombstone bool) *El
 
 	return node
 }
+
+func (skipList *SkipList) Retrieve(key string) *Element {
+	current := skipList.head
+
+	for i := skipList.currLvl - 1; i >= 0; i-- {
+		next := current.NextNodes[i]
+
+		for next != nil && next.Key <= key {
+			current = next
+			next = current.NextNodes[i]
+
+			if current.Key == key {
+				return current
+			}
+		}
+	}
+
+	return nil
+}
+
+func (skipList *SkipList) Delete(key string) *Element {
+	current := skipList.head
+
+	for i := skipList.currLvl - 1; i >= 0; i-- {
+		next := current.NextNodes[i]
+
+		for next != nil && next.Key <= key {
+			current = next
+			next = current.NextNodes[i]
+
+			if current.Key == key {
+				current.Tombstone = true
+				current.Timestamp = time.Now().String()
+				temp := current
+				current = current.NextNodes[i]
+				return temp
+			}
+		}
+	}
+
+	return nil
+}
