@@ -21,21 +21,21 @@ func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 
 	reader := bufio.NewReader(file)
 
-	fileLenBytes := make([]byte, 8)
-	_, err = reader.Read(fileLenBytes)
+	fileLengthBytes := make([]byte, 8)
+	_, err = reader.Read(fileLengthBytes)
 	if err != nil {
 		panic(err)
 	}
-	fileLen := binary.LittleEndian.Uint64(fileLenBytes)
+	fileLength := binary.LittleEndian.Uint64(fileLengthBytes)
 
-	startKeyLenBytes := make([]byte, 8)
-	_, err = reader.Read(startKeyLenBytes)
+	startKeyLengthBytes := make([]byte, 8)
+	_, err = reader.Read(startKeyLengthBytes)
 	if err != nil {
 		panic(err)
 	}
-	startKeyLen := binary.LittleEndian.Uint64(startKeyLenBytes)
+	startKeyLength := binary.LittleEndian.Uint64(startKeyLengthBytes)
 
-	startKeyBytes := make([]byte, startKeyLen)
+	startKeyBytes := make([]byte, startKeyLength)
 	_, err = reader.Read(startKeyBytes)
 	if err != nil {
 		panic(err)
@@ -46,14 +46,14 @@ func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 		return false, 0
 	}
 
-	endKeyLenBytes := make([]byte, 8)
-	_, err = reader.Read(endKeyLenBytes)
+	endKeyLengthBytes := make([]byte, 8)
+	_, err = reader.Read(endKeyLengthBytes)
 	if err != nil {
 		panic(err)
 	}
-	endKeyLen := binary.LittleEndian.Uint64(endKeyLenBytes)
+	endKeyLength := binary.LittleEndian.Uint64(endKeyLengthBytes)
 
-	endKeyBytes := make([]byte, endKeyLen)
+	endKeyBytes := make([]byte, endKeyLength)
 	_, err = reader.Read(endKeyBytes)
 	if err != nil {
 		panic(err)
@@ -66,15 +66,15 @@ func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 
 	found = true
 	var i uint64
-	for i = 0; i < fileLen-2; i++ {
+	for i = 0; i < fileLength-2; i++ {
 		keyBytes := make([]byte, 8)
 		_, err = reader.Read(keyBytes)
 		if err != nil {
 			panic(err)
 		}
-		nodeKeyLen := binary.LittleEndian.Uint64(keyBytes)
+		nodeKeyLength := binary.LittleEndian.Uint64(keyBytes)
 
-		nodeKeyBytes := make([]byte, nodeKeyLen)
+		nodeKeyBytes := make([]byte, nodeKeyLength)
 		_, err = reader.Read(nodeKeyBytes)
 		if err != nil {
 			panic(err)
@@ -105,10 +105,10 @@ func WriteSummaryToFile(keys []string, offsets []uint, filename string) {
 
 	writer := bufio.NewWriter(file)
 
-	fileLen := uint64(len(keys))
-	fileLenBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(fileLenBytes, fileLen)
-	_, err = writer.Write(fileLenBytes)
+	fileLength := uint64(len(keys))
+	fileLengthBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(fileLengthBytes, fileLength)
+	_, err = writer.Write(fileLengthBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,10 +119,10 @@ func WriteSummaryToFile(keys []string, offsets []uint, filename string) {
 
 		keyBytes := []byte(key)
 
-		keyLen := uint64(len(keyBytes))
-		keyLenBytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(keyLenBytes, keyLen)
-		_, err := writer.Write(keyLenBytes)
+		keyLength := uint64(len(keyBytes))
+		keyLengthBytes := make([]byte, 8)
+		binary.LittleEndian.PutUint64(keyLengthBytes, keyLength)
+		_, err := writer.Write(keyLengthBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -140,6 +140,7 @@ func WriteSummaryToFile(keys []string, offsets []uint, filename string) {
 				log.Fatal(err)
 			}
 		}
+
 		err = writer.Flush()
 		if err != nil {
 			return
