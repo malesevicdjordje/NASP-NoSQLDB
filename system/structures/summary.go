@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+// FindSummaryByKey searches for a summary in a file by a given key,
+// returning a boolean indicating whether the key is found and the associated offset.
 func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 	found = false
 	offset = int64(8)
@@ -93,6 +95,7 @@ func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 	return
 }
 
+// WriteSummaryToFile creates a summary file with provided keys and corresponding offsets.
 func WriteSummaryToFile(keys []string, offsets []uint, filename string) {
 	file, err := os.Create(filename)
 	if err != nil {
