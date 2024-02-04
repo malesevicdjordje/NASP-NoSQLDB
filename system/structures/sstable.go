@@ -3,6 +3,7 @@ package structures
 import (
 	"bufio"
 	"encoding/binary"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -144,9 +145,63 @@ func (st *SSTable) WriteTableOfContents() {
 	}
 }
 
+// Helper functions
+
+func writeVarUint(writer *bufio.Writer, value uint64) (written uint) {
+	bytes := make([]byte, 0, 10)
+	for value >= 0x80 {
+		bytes = append(bytes, byte(value|0x80))
+		value >>= 7
+	}
+	bytes = append(bytes, byte(value))
+	written, _ = writer.Write(bytes)
+	return
+}
+
+func writeBytes(writer *bufio.Writer, data []byte) (written uint) {
+	written, _ = writer.Write(data)
+	return
+}
+
+func readVarUint(reader *bufio.Reader) (value uint64) {
+	shift := uint(0)
+	for {
+		b, err := reader.ReadByte()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+		value |= uint64(b&0x7F) << shift
+		shift += 7
+		if b&0x80 == 0 {
+			break
+		}
+	}
+	return
+}
+
+func readBytes(reader *bufio.Reader, length int) (data []byte) {
+	data = make([]byte, length)
+	_, err := io.ReadFull(reader, data)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 func writeLine(writer *bufio.Writer, line string) {
 	_, err := writer.WriteString(line + "\n")
 	if err != nil {
 		panic(err)
 	}
+}
+
+func readLine(reader *bufio.Reader) (line string) {
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
+	return strings.TrimSpace(line)
 }
