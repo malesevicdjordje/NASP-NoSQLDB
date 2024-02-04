@@ -18,11 +18,6 @@ func (mt *MemoryTable) Insert(key string, value []byte, isTombstone bool) {
 	mt.skipList.Insert(key, value, isTombstone)
 }
 
-func (mt *MemoryTable) Erase(key string) bool {
-	removedElement := mt.skipList.Delete(key)
-	return removedElement != nil
-}
-
 func (mt *MemoryTable) Modify(key string, value []byte, isTombstone bool) {
 	node := mt.skipList.Retrieve(key)
 	if node == nil {
@@ -30,6 +25,11 @@ func (mt *MemoryTable) Modify(key string, value []byte, isTombstone bool) {
 	} else {
 		node.Value = value
 	}
+}
+
+func (mt *MemoryTable) Erase(key string) bool {
+	removedElement := mt.skipList.Delete(key)
+	return removedElement != nil
 }
 
 func (mt *MemoryTable) Lookup(key string) (found, deleted bool, value []byte) {
@@ -46,4 +46,14 @@ func (mt *MemoryTable) Lookup(key string) (found, deleted bool, value []byte) {
 
 func (mt *MemoryTable) CurrentSize() uint {
 	return mt.size
+}
+
+func (mt *MemoryTable) PerformFlush() {
+	filename := findSSTableFilename("1")
+	NewSSTable(*mt, filename)
+}
+
+func (mt *MemoryTable) ShouldFlush() bool {
+	usagePercentage := float64(mt.size) / float64(mt.maxSize) * 100
+	return usagePercentage >= float64(mt.threshold)
 }
