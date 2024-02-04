@@ -115,3 +115,15 @@ func (skipList *SkipList) Retrieve(key string) *Element {
 
 	return nil
 }
+
+func (mt *MemoryTable) Lookup(key string) (found, deleted bool, value []byte) {
+	node := mt.skipList.Retrieve(key)
+	if node == nil {
+		found, deleted, value = false, false, nil
+	} else if node.Tombstone {
+		found, deleted, value = true, true, nil
+	} else {
+		found, deleted, value = true, false, node.Value
+	}
+	return
+}
