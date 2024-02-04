@@ -134,3 +134,21 @@ func writeNodesToFile(root *MerkleNode, file *os.File) {
 		}
 	}
 }
+
+// PrintTree prints the tree in breadth-first order.
+func PrintTree(root *MerkleNode) {
+	queue := []*MerkleNode{root}
+
+	for len(queue) != 0 {
+		node := queue[0]
+		queue = queue[1:]
+		// fmt.Println(node.String())
+
+		if node.Left != nil {
+			queue = append(queue, node.Left)
+		}
+		if node.Right != nil {
+			queue = append(queue, node.Right)
+		}
+	}
+}
