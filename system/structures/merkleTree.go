@@ -38,3 +38,18 @@ func ConvertStringsToBytes(strings []string) [][]byte {
 	}
 	return byteData
 }
+
+// BuildMerkleTree is the entry point for creating the Merkle tree.
+func BuildMerkleTree(dataKeys [][]byte, filePath string) *MerkleRoot {
+	leafNodes := CreateLeafNodes(dataKeys)
+
+}
+
+// CreateLeafNodes forms leaf nodes of the tree.
+func CreateLeafNodes(data [][]byte) []*MerkleNode {
+	leaves := make([]*MerkleNode, len(data))
+	for i, datum := range data {
+		leaves[i] = &MerkleNode{HashValue: CalculateHash(datum), Left: nil, Right: nil}
+	}
+	return leaves
+}
