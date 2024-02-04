@@ -78,6 +78,33 @@ func (cache *LRUCache) updateExistingNode(node *CacheNode, existingValue []byte)
 	}
 }
 
+func (cache *LRUCache) moveNodeToHead(key string) {
+	list := cache.list
+	current := list.head
+
+	for current != nil {
+		if current.Key == key {
+			if current != list.head {
+				// Remove the node from its current position
+				current.Previous.Next = current.Next
+
+				if current.Next != nil {
+					current.Next.Previous = current.Previous
+				} else {
+					// Update the tail pointer if the node is the tail
+					list.tail = current.Previous
+				}
+
+				// Add the node to the head of the list
+				cache.addNodeToHead(current)
+			}
+			break
+		}
+
+		current = current.Next
+	}
+}
+
 func (cache *LRUCache) evictLRUNode() {
 	list := cache.list
 
