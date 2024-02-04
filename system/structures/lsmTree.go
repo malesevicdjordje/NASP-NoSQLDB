@@ -11,11 +11,13 @@ import (
 	"strings"
 )
 
+// LSMTree represents a Log-Structured Merge Tree.
 type LSMTree struct {
 	maxLevel int
 	maxSize  int
 }
 
+// NewLSMTree creates a new LSM Tree instance.
 func NewLSMTree(maxLevels, maxSize int) *LSMTree {
 	return &LSMTree{
 		maxLevel: maxLevels,
@@ -23,11 +25,13 @@ func NewLSMTree(maxLevels, maxSize int) *LSMTree {
 	}
 }
 
+// IsCompactionNeeded checks if compaction is needed at a given level.
 func (tree LSMTree) IsCompactionNeeded(directory string, level int) (bool, []string, []string, []string, []string, []string) {
 	dataFiles, indexFiles, summaryFiles, tocFiles, filterFiles := FindFiles(directory, level)
 	return len(indexFiles) == tree.maxSize, dataFiles, indexFiles, summaryFiles, tocFiles, filterFiles
 }
 
+// PerformCompaction performs compaction at a given level in the LSM Tree.
 func (tree LSMTree) PerformCompaction(directory string, level int) {
 	if level >= tree.maxLevel {
 		return // No compaction after reaching the last level.
@@ -64,6 +68,7 @@ func (tree LSMTree) PerformCompaction(directory string, level int) {
 	tree.PerformCompaction(directory, level+1)
 }
 
+// MergeTables merges two SSTables into a new one.
 func MergeTables(directory string, numFile, level int, firstData, firstIndex, firstSummary, firstToc, firstFilter,
 	secondData, secondIndex, secondSummary, secondToc, secondFilter string) {
 
@@ -141,6 +146,7 @@ func MergeTables(directory string, numFile, level int, firstData, firstIndex, fi
 	_ = os.Remove(directory + secondFilter)
 }
 
+// readAndWriteData reads and writes data during the merging process.
 func readAndWriteData(currentOffset, currentOffset1, currentOffset2 uint, newData, firstDataFile, secondDataFile *os.File,
 	fileLen1, fileLen2 uint64, table *SSTable, level int) uint64 {
 
@@ -447,21 +453,21 @@ func FindFiles(dir string, level int) ([]string, []string, []string, []string, [
 	var tocFiles []string
 	var filterFiles []string
 
-	for _, f := range files {
-		if strings.Contains(f.Name(), "lev"+substr+"-Data.db") {
-			dataFiles = append(dataFiles, f.Name())
+	for _, file := range files {
+		if strings.Contains(file.Name(), "lev"+substr+"-Data.db") {
+			dataFiles = append(dataFiles, file.Name())
 		}
-		if strings.Contains(f.Name(), "lev"+substr+"-Index.db") {
-			indexFiles = append(indexFiles, f.Name())
+		if strings.Contains(file.Name(), "lev"+substr+"-Index.db") {
+			indexFiles = append(indexFiles, file.Name())
 		}
-		if strings.Contains(f.Name(), "lev"+substr+"-Summary.db") {
-			summaryFiles = append(summaryFiles, f.Name())
+		if strings.Contains(file.Name(), "lev"+substr+"-Summary.db") {
+			summaryFiles = append(summaryFiles, file.Name())
 		}
-		if strings.Contains(f.Name(), "lev"+substr+"-TOC.txt") {
-			tocFiles = append(tocFiles, f.Name())
+		if strings.Contains(file.Name(), "lev"+substr+"-TOC.txt") {
+			tocFiles = append(tocFiles, file.Name())
 		}
-		if strings.Contains(f.Name(), "lev"+substr+"-Filter.gob") {
-			filterFiles = append(filterFiles, f.Name())
+		if strings.Contains(file.Name(), "lev"+substr+"-Filter.gob") {
+			filterFiles = append(filterFiles, file.Name())
 		}
 	}
 
