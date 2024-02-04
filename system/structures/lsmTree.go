@@ -38,6 +38,7 @@ func (tree LSMTree) PerformCompaction(directory string, level int) {
 		return
 	}
 
+	//compaction is needed
 	_, indexFilesNextLevel, _, _, _ := FindFiles(directory, level+1)
 
 	var numFile int
@@ -66,13 +67,11 @@ func (tree LSMTree) PerformCompaction(directory string, level int) {
 func MergeTables(directory string, numFile, level int, firstData, firstIndex, firstSummary, firstToc, firstFilter,
 	secondData, secondIndex, secondSummary, secondToc, secondFilter string) {
 
-	mergedTable := &SSTable{
-		generalFilename: directory + "usertable-data-ic-" + strconv.Itoa(numFile) + "-lev" + strconv.Itoa(level) + "-",
-		dataFilename:    "",
-		indexFilename:   "",
-		summaryFilename: "",
-		filterFilename:  "",
-	}
+	strLevel := strconv.Itoa(level + 1)
+	generalFilename := directory + "usertable-data-ic-" + strconv.Itoa(numFile) + "-lev" + strLevel + "-"
+	mergedTable := &SSTable{generalFilename, generalFilename + "Data.db",
+		generalFilename + "Index.db", generalFilename + "Summary.db",
+		generalFilename + "Filter.gob"}
 
 	newData, err := os.Create(mergedTable.generalFilename + "Data.db")
 	if err != nil {
@@ -103,10 +102,23 @@ func MergeTables(directory string, numFile, level int, firstData, firstIndex, fi
 	}
 
 	reader1 := bufio.NewReader(firstDataFile)
-	fileLen1, currentOffset1 := readFileSize(reader1, currentOffset1)
+	bytes := make([]byte, 8)
+	_, err = reader1.Read(bytes)
+	if err != nil {
+		panic(err)
+	}
+	fileLen1 := binary.LittleEndian.Uint64(bytes)
+	currentOffset1 += 8
 
+	// file length drugog data fajla
 	reader2 := bufio.NewReader(secondDataFile)
-	fileLen2, currentOffset2 := readFileSize(reader2, currentOffset2)
+	bytes = make([]byte, 8)
+	_, err = reader2.Read(bytes)
+	if err != nil {
+		panic(err)
+	}
+	fileLen2 := binary.LittleEndian.Uint64(bytes)
+	currentOffset2 += 8
 
 	fileLen := readAndWriteData(currentOffset, currentOffset1, currentOffset2, newData, firstDataFile, secondDataFile,
 		fileLen1, fileLen2, mergedTable, level)
@@ -409,17 +421,74 @@ func readData(file *os.File, currentOffset uint) ([]byte, string, byte, uint64, 
 }
 
 func CreateMerkle(level int, newData string, values [][]byte) {
-	files, _ := ioutil.ReadDir("./kv-system/data/metadata/") // lista svih fajlova iz direktorijuma
+	files, _ := ioutil.ReadDir("./system/data/metadata/") // lista svih fajlova iz direktorijuma
 	for _, f := range files {
 		// brisemo sve metadata fajlove sa zadatog nivoa
 		if strings.Contains(f.Name(), "lev"+strconv.Itoa(level)+"-Metadata.txt") {
-			err := os.Remove("./kv-system/data/metadata/" + f.Name())
+			err := os.Remove("./system/data/metadata/" + f.Name())
 			if err != nil {
 				fmt.Println(err)
 			}
 		}
 	}
 
-	filename := strings.ReplaceAll(newData, "kv-system/data/sstable/", "")
+	filename := strings.ReplaceAll(newData, "system/data/sstable/", "")
 	BuildMerkleTree(values, filename)
+}
+
+func FindFiles(dir string, level int) ([]string, []string, []string, []string, []string) {
+	substr := strconv.Itoa(level)
+
+	files, _ := ioutil.ReadDir(dir) // lista svih fajlova iz direktorijuma
+
+	var dataFiles []string
+	var indexFiles []string
+	var summaryFiles []string
+	var tocFiles []string
+	var filterFiles []string
+
+	for _, f := range files {
+		if strings.Contains(f.Name(), "lev"+substr+"-Data.db") {
+			dataFiles = append(dataFiles, f.Name())
+		}
+		if strings.Contains(f.Name(), "lev"+substr+"-Index.db") {
+			indexFiles = append(indexFiles, f.Name())
+		}
+		if strings.Contains(f.Name(), "lev"+substr+"-Summary.db") {
+			summaryFiles = append(summaryFiles, f.Name())
+		}
+		if strings.Contains(f.Name(), "lev"+substr+"-TOC.txt") {
+			tocFiles = append(tocFiles, f.Name())
+		}
+		if strings.Contains(f.Name(), "lev"+substr+"-Filter.gob") {
+			filterFiles = append(filterFiles, f.Name())
+		}
+	}
+
+	return dataFiles, indexFiles, summaryFiles, tocFiles, filterFiles
+}
+
+func FileSize(filename string, len uint64) {
+	file, err := os.OpenFile(filename, os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	_, err = file.Seek(0, 0)
+
+	writer := bufio.NewWriter(file)
+
+	bytesLen := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytesLen, len)
+	_, err = writer.Write(bytesLen)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		return
+	}
+
+	err = file.Close()
 }
