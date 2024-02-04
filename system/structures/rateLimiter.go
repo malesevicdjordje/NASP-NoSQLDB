@@ -17,3 +17,20 @@ func NewRateLimiter(fillRate int64, maxTokens int) *RateLimiter {
 		lastRefill:      time.Now().Unix(),
 	}
 }
+
+func (rl *RateLimiter) AllowRequest() bool {
+	// If enough time has passed since the last refill, reset the available tokens to the maximum.
+	if time.Now().Unix()-rl.lastRefill > rl.fillRate {
+		rl.lastRefill = time.Now().Unix()
+		rl.availableTokens = rl.maxTokens
+	}
+
+	// If there are no available tokens, deny the request.
+	if rl.availableTokens <= 0 {
+		return false
+	}
+
+	// Decrement the available tokens by one and allow the request.
+	rl.availableTokens--
+	return true
+}
