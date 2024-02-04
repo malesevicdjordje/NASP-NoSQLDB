@@ -145,6 +145,119 @@ func (st *SSTable) WriteTableOfContents() {
 	}
 }
 
+func (st *SSTable) FindRecord(key string, offset int64) (found bool, value []byte, timestamp string) {
+	found = false
+	timestamp = ""
+
+	file, err := os.Open(st.dataFilename)
+	if err != nil {
+		panic(err)
+	}
+
+	reader := bufio.NewReader(file)
+	fileLenBytes := make([]byte, 8)
+	_, err = reader.Read(fileLenBytes)
+	if err != nil {
+		panic(err)
+	}
+	fileLen := binary.LittleEndian.Uint64(fileLenBytes)
+
+	_, err = file.Seek(offset, 0)
+	if err != nil {
+		return false, nil, ""
+	}
+	reader = bufio.NewReader(file)
+
+	for i := uint64(0); i < fileLen; i++ {
+		var deleted bool
+
+		// Read CRC
+		crcBytes := readBytes(reader, 4)
+		crcValue := binary.LittleEndian.Uint32(crcBytes)
+
+		// Read Timestamp
+		timestampBytes := readBytes(reader, 19)
+		timestamp = string(timestampBytes[:])
+
+		// Read Tombstone
+		tombstoneByte, err := reader.ReadByte()
+		if err != nil {
+			panic(err)
+		}
+		deleted = tombstoneByte == 1
+
+		// Read Key
+		keyLen := readVarUint(reader)
+		keyBytes := readBytes(reader, int(keyLen))
+		nodeKey := string(keyBytes[:])
+
+		if nodeKey == key {
+			found = true
+		}
+
+		// Read Value
+		valueLen := readVarUint(reader)
+		value = readBytes(reader, int(valueLen))
+
+		if found && !deleted && CRC32(value) == crcValue {
+			break
+		} else if found && deleted {
+			return false, nil, ""
+		}
+	}
+
+	file.Close()
+	return found, value, timestamp
+}
+
+func readSSTable(filename, level string) (table *SSTable) {
+	filename = "system/data/sstable/usertable-data-ic-" + filename + "-lev" + level + "-TOC.txt"
+
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+
+	dataFilename := readLine(reader)
+	indexFilename := readLine(reader)
+	summaryFilename := readLine(reader)
+	filterFilename := readLine(reader)
+	generalFilename := strings.ReplaceAll(dataFilename, "Data.db", "")
+
+	table = &SSTable{
+		generalFilename: generalFilename,
+		dataFilename:    dataFilename,
+		indexFilename:   indexFilename,
+		summaryFilename: summaryFilename,
+		filterFilename:  filterFilename,
+	}
+
+	return
+}
+
+func (st *SSTable) QueryRecord(key string) (found bool, value []byte, timestamp string) {
+	found = false
+	value = nil
+	bf := readBF(st.filterFilename)
+	found = bf.Search(key)
+	if found {
+		found, offset := FindSummaryByKey(key, st.summaryFilename)
+		if found {
+			found, offset = SearchIndex(key, offset, st.indexFilename)
+			if found {
+				found, value, timestamp = st.FindRecord(key, offset)
+				if found {
+					return true, value, timestamp
+				}
+			}
+		}
+	}
+	return false, nil, ""
+}
+
 // Helper functions
 
 func writeVarUint(writer *bufio.Writer, value uint64) (written uint) {

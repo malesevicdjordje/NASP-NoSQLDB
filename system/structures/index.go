@@ -34,7 +34,7 @@ func NewSimpleIndex(keys []string, offsets []uint, fileName string) *SimpleIndex
 }
 
 // Search finds a key in the index and returns its existence status and data offset.
-func (index *SimpleIndex) Search(key string, startOffset int64) (found bool, dataOffset int64) {
+func (index *SimpleIndex) SearchIndex(key string, startOffset int64) (found bool, dataOffset int64) {
 	found = false
 	dataOffset = 0
 
