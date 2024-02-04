@@ -2,6 +2,7 @@ package structures
 
 import "time"
 
+// RateLimiter is a token bucket rate-limiting implementation.
 type RateLimiter struct {
 	maxTokens       int   // maximum number of tokens the bucket can hold
 	availableTokens int   // number of tokens currently available in the bucket
@@ -9,6 +10,7 @@ type RateLimiter struct {
 	lastRefill      int64 // time of the last bucket refill (in seconds)
 }
 
+// NewRateLimiter creates and returns a new RateLimiter instance with the specified fill rate and maximum number of tokens.
 func NewRateLimiter(fillRate int64, maxTokens int) *RateLimiter {
 	return &RateLimiter{
 		maxTokens:       maxTokens,
@@ -18,6 +20,7 @@ func NewRateLimiter(fillRate int64, maxTokens int) *RateLimiter {
 	}
 }
 
+// AllowRequest checks if a request can be allowed based on the rate limit.
 func (rl *RateLimiter) AllowRequest() bool {
 	// If enough time has passed since the last refill, reset the available tokens to the maximum.
 	if time.Now().Unix()-rl.lastRefill > rl.fillRate {
