@@ -88,12 +88,12 @@ type WriteAheadLog struct {
 	currentSegment *WalSegment
 }
 
-func (wal *WriteAheadLog) CurrentSegment() *WalSegment {
-	return wal.currentSegment
-}
-
 func (wal *WriteAheadLog) Path() string {
 	return wal.path
+}
+
+func (wal *WriteAheadLog) CurrentSegment() *WalSegment {
+	return wal.currentSegment
 }
 
 func NewWriteAheadLog(path string) *WriteAheadLog {
@@ -108,11 +108,6 @@ func NewWriteAheadLog(path string) *WriteAheadLog {
 	return &wal
 }
 
-func (wal *WriteAheadLog) PersistCurrentSegment() {
-	wal.currentSegment.Persist(wal.path)
-	wal.segmentNames[wal.currentSegment.index] = "wal" + strconv.FormatUint(wal.currentSegment.index, 10) + ".log"
-}
-
 func (wal *WriteAheadLog) CreateNewSegment() {
 	newSegment := WalSegment{
 		index:    wal.currentSegment.index + 1,
@@ -124,6 +119,11 @@ func (wal *WriteAheadLog) CreateNewSegment() {
 	wal.segments = append(wal.segments, &newSegment)
 	wal.currentSegment = &newSegment
 	wal.PersistCurrentSegment()
+}
+
+func (wal *WriteAheadLog) PersistCurrentSegment() {
+	wal.currentSegment.Persist(wal.path)
+	wal.segmentNames[wal.currentSegment.index] = "wal" + strconv.FormatUint(wal.currentSegment.index, 10) + ".log"
 }
 
 func (wal *WriteAheadLog) PutElement(elem *Element) bool {
@@ -165,6 +165,20 @@ func (wal *WriteAheadLog) PutElement(elem *Element) bool {
 		}
 	}
 	return true
+}
+
+func (wal *WriteAheadLog) RemoveOldSegments() {
+	wal.lowWaterMark = uint(wal.currentSegment.index - 2)
+	for index, value := range wal.segmentNames {
+		index2 := uint(index)
+		if index2 <= wal.lowWaterMark {
+			err := os.Remove(WalPath + value)
+			delete(wal.segmentNames, index)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
 }
 
 func (wal *WriteAheadLog) ReadLatestSegment(path string) {
