@@ -31,3 +31,19 @@ func (mt *MemoryTable) Modify(key string, value []byte, isTombstone bool) {
 		node.Value = value
 	}
 }
+
+func (mt *MemoryTable) Lookup(key string) (found, deleted bool, value []byte) {
+	node := mt.skipList.Retrieve(key)
+	if node == nil {
+		found, deleted, value = false, false, nil
+	} else if node.Tombstone {
+		found, deleted, value = true, true, nil
+	} else {
+		found, deleted, value = true, false, node.Value
+	}
+	return
+}
+
+func (mt *MemoryTable) CurrentSize() uint {
+	return mt.size
+}
