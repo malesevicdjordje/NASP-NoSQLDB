@@ -3,6 +3,9 @@ package structures
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"log"
+	"os"
+	"strings"
 )
 
 // MerkleRoot represents the root of the Merkle tree.
@@ -43,6 +46,12 @@ func ConvertStringsToBytes(strings []string) [][]byte {
 func BuildMerkleTree(dataKeys [][]byte, filePath string) *MerkleRoot {
 	leafNodes := CreateLeafNodes(dataKeys)
 	rootNode := CreateAllNodes(leafNodes)
+
+	root := MerkleRoot{TopNode: rootNode}
+	newPath := strings.Replace(filePath, "Data.db", "Metadata.txt", 1)
+	newPath = "./system/data/metadata/" + newPath
+	WriteTreeToFile(rootNode, newPath)
+	return &root
 }
 
 // CreateLeafNodes forms leaf nodes of the tree.
@@ -81,10 +90,47 @@ func createParentNode(node1, node2 *MerkleNode) *MerkleNode {
 	newNode := &MerkleNode{HashValue: CalculateHash(newNodeBytes), Left: node1, Right: node2}
 	return newNode
 }
-
 func getOrCreateEmptyNode(nodes []*MerkleNode, index int) *MerkleNode {
 	if index < len(nodes) {
 		return nodes[index]
 	}
 	return &MerkleNode{HashValue: [20]byte{}, Left: nil, Right: nil}
+}
+
+func WriteTreeToFile(root *MerkleNode, filePath string) {
+	if err := createAndWriteToFile(root, filePath); err != nil {
+		log.Fatal(err)
+	}
+}
+func createAndWriteToFile(root *MerkleNode, filePath string) error {
+	newFile, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer newFile.Close()
+
+	file, err := os.OpenFile(filePath, os.O_WRONLY, 0444)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writeNodesToFile(root, file)
+	return nil
+}
+func writeNodesToFile(root *MerkleNode, file *os.File) {
+	queue := []*MerkleNode{root}
+
+	for len(queue) != 0 {
+		node := queue[0]
+		queue = queue[1:]
+		_, _ = file.WriteString(node.String() + "\n")
+
+		if node.Left != nil {
+			queue = append(queue, node.Left)
+		}
+		if node.Right != nil {
+			queue = append(queue, node.Right)
+		}
+	}
 }
