@@ -61,4 +61,33 @@ func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 		return false, 0
 	}
 
+	found = true
+	var i uint64
+	for i = 0; i < fileLen-2; i++ {
+		keyBytes := make([]byte, 8)
+		_, err = reader.Read(keyBytes)
+		if err != nil {
+			panic(err)
+		}
+		nodeKeyLen := binary.LittleEndian.Uint64(keyBytes)
+
+		nodeKeyBytes := make([]byte, nodeKeyLen)
+		_, err = reader.Read(nodeKeyBytes)
+		if err != nil {
+			panic(err)
+		}
+		nodeKey := string(nodeKeyBytes[:])
+
+		if nodeKey <= targetKey {
+			offsetBytes := make([]byte, 8)
+			_, err = reader.Read(offsetBytes)
+			if err != nil {
+				panic(err)
+			}
+			offset = int64(binary.LittleEndian.Uint64(offsetBytes))
+		} else {
+			break
+		}
+	}
+	return
 }
