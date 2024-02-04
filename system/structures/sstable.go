@@ -52,4 +52,64 @@ func NewSSTable(data MemTable, filename string) (table *SSTable) {
 	if err != nil {
 		return
 	}
+
+	// Iterate over data and write to SSTable file
+	for node := data.data.head.Next[0]; node != nil; node = node.Next[0] {
+		key, value := node.Key, node.Value
+		keys = append(keys, key)
+		offsets = append(offsets, currentOffset)
+		values = append(values, value)
+
+		bloomFilter.Add(*node)
+
+		// Write Checksum
+		crc := CRC32(value)
+		crcBytes := make([]byte, 4)
+		binary.LittleEndian.PutUint32(crcBytes, crc)
+		bytesWritten, err := writer.Write(crcBytes)
+		currentOffset += uint(bytesWritten)
+		if err != nil {
+			return
+		}
+
+		// Write Timestamp
+		timestamp := node.Timestamp
+		timestampBytes := make([]byte, 19)
+		copy(timestampBytes, timestamp)
+		bytesWritten, err = writer.Write(timestampBytes)
+		if err != nil {
+			log.Fatal(err)
+		}
+		currentOffset += uint(bytesWritten)
+
+		// Write Tombstone
+		tombstone := node.Tombstone
+		tombstoneInt := uint8(0)
+		if tombstone {
+			tombstoneInt = 1
+		}
+
+		err = writer.WriteByte(tombstoneInt)
+		currentOffset += 1
+		if err != nil {
+			return
+		}
+
+		// Write Key
+		keyBytes := []byte(key)
+		keyLen := uint64(len(keyBytes))
+		writeVarUint(writer, keyLen)
+		currentOffset += writeBytes(writer, keyBytes)
+
+		// Write Value
+		valueLen := uint64(len(value))
+		writeVarUint(writer, valueLen)
+		currentOffset += writeBytes(writer, value)
+
+		err = writer.Flush()
+		if err != nil {
+			return
+		}
+	}
+
 }
