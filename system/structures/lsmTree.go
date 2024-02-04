@@ -1,5 +1,12 @@
 package structures
 
+import (
+	"bufio"
+	"log"
+	"os"
+	"strconv"
+)
+
 type LSMTree struct {
 	maxLevel int
 	maxSize  int
@@ -50,4 +57,70 @@ func (tree LSMTree) PerformCompaction(directory string, level int) {
 	}
 
 	tree.PerformCompaction(directory, level+1)
+}
+
+func MergeTables(directory string, numFile, level int, firstData, firstIndex, firstSummary, firstToc, firstFilter,
+	secondData, secondIndex, secondSummary, secondToc, secondFilter string) {
+
+	mergedTable := &SSTable{
+		generalFilename: directory + "usertable-data-ic-" + strconv.Itoa(numFile) + "-lev" + strconv.Itoa(level) + "-",
+		dataFilename:    "",
+		indexFilename:   "",
+		summaryFilename: "",
+		filterFilename:  "",
+	}
+
+	newData, err := os.Create(mergedTable.generalFilename + "Data.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	currentOffset := uint(0)
+	currentOffset1 := uint(0)
+	currentOffset2 := uint(0)
+
+	writer := bufio.NewWriter(newData)
+	bytesLen := make([]byte, 8)
+
+	bytesWritten, err := writer.Write(bytesLen)
+	currentOffset += uint(bytesWritten)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	firstDataFile, err := os.Open(directory + firstData)
+	if err != nil {
+		panic(err)
+	}
+
+	secondDataFile, err := os.Open(directory + secondData)
+	if err != nil {
+		panic(err)
+	}
+
+	reader1 := bufio.NewReader(firstDataFile)
+	fileLen1, currentOffset1 := readFileSize(reader1, currentOffset1)
+
+	reader2 := bufio.NewReader(secondDataFile)
+	fileLen2, currentOffset2 := readFileSize(reader2, currentOffset2)
+
+	fileLen := readAndWriteData(currentOffset, currentOffset1, currentOffset2, newData, firstDataFile, secondDataFile,
+		fileLen1, fileLen2, mergedTable, level)
+
+	FileSize(mergedTable.dataFilename, fileLen)
+
+	_ = newData.Close()
+	_ = firstDataFile.Close()
+	_ = secondDataFile.Close()
+
+	_ = os.Remove(directory + firstData)
+	_ = os.Remove(directory + firstIndex)
+	_ = os.Remove(directory + firstSummary)
+	_ = os.Remove(directory + firstToc)
+	_ = os.Remove(directory + firstFilter)
+	_ = os.Remove(directory + secondData)
+	_ = os.Remove(directory + secondIndex)
+	_ = os.Remove(directory + secondSummary)
+	_ = os.Remove(directory + secondToc)
+	_ = os.Remove(directory + secondFilter)
 }
