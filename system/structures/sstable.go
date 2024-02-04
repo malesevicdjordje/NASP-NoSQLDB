@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"log"
 	"os"
+	"strings"
 )
 
 type SSTable struct {
@@ -112,4 +113,40 @@ func NewSSTable(data MemTable, filename string) (table *SSTable) {
 		}
 	}
 
+	index := NewSimpleIndex(keys, offsets, table.indexFilename)
+	indexKeys, indexOffsets := index.WriteToFile()
+	WriteSummaryToFile(indexKeys, indexOffsets, table.summaryFilename)
+	writeBF(table.filterFilename, bloomFilter)
+	BuildMerkleTree(values, strings.ReplaceAll(table.dataFilename, "kv-system/data/sstable/", ""))
+	table.WriteTableOfContents()
+
+	return
+}
+
+func (st *SSTable) WriteTableOfContents() {
+	filename := st.generalFilename + "TOC.txt"
+	file, err := os.Create(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+
+	writeLine(writer, st.dataFilename)
+	writeLine(writer, st.indexFilename)
+	writeLine(writer, st.summaryFilename)
+	writeLine(writer, st.filterFilename)
+
+	err = writer.Flush()
+	if err != nil {
+		return
+	}
+}
+
+func writeLine(writer *bufio.Writer, line string) {
+	_, err := writer.WriteString(line + "\n")
+	if err != nil {
+		panic(err)
+	}
 }
