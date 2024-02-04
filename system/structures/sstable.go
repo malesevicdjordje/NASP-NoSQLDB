@@ -1,6 +1,8 @@
 package structures
 
 import (
+	"bufio"
+	"encoding/binary"
 	"log"
 	"os"
 )
@@ -35,4 +37,19 @@ func NewSSTable(data MemTable, filename string) (table *SSTable) {
 	}
 	defer file.Close()
 
+	writer := bufio.NewWriter(file)
+
+	// Write file length
+	fileLenBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(fileLenBytes, uint64(data.Size()))
+	bytesWritten, err := writer.Write(fileLenBytes)
+	currentOffset += uint(bytesWritten)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		return
+	}
 }
