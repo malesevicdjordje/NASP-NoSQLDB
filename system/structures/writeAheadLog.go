@@ -74,3 +74,20 @@ func (s *WalSegment) Persist(walPath string) {
 		return
 	}
 }
+
+type WriteAheadLog struct {
+	path           string
+	lowWaterMark   uint
+	segmentSize    uint
+	segmentNames   map[uint64]string
+	segments       []*WalSegment
+	currentSegment *WalSegment
+}
+
+func (wal *WriteAheadLog) CurrentSegment() *WalSegment {
+	return wal.currentSegment
+}
+
+func (wal *WriteAheadLog) Path() string {
+	return wal.path
+}
