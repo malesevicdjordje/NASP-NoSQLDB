@@ -3,9 +3,11 @@ package structures
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -256,6 +258,52 @@ func (st *SSTable) QueryRecord(key string) (found bool, value []byte, timestamp 
 		}
 	}
 	return false, nil, ""
+}
+
+func findSSTableFilename(level string) (filename string) {
+	filenameNum := 1
+	filename = strconv.Itoa(filenameNum)
+	possibleFilename := "./system/data/sstable/usertable-data-ic-" + filename + "-lev" + level + "-TOC.txt"
+
+	for {
+		_, err := os.Stat(possibleFilename)
+		if err == nil {
+			filenameNum += 1
+			filename = strconv.Itoa(filenameNum)
+		} else if errors.Is(err, os.ErrNotExist) {
+			return
+		}
+		possibleFilename = "./system/data/sstable/usertable-data-ic-" + filename + "-lev" + level + "-TOC.txt"
+	}
+
+}
+
+func SearchThroughSSTables(key string, maxLevels int) (found bool, oldValue []byte) {
+	oldTimestamp := ""
+	found = false
+	levelNum := maxLevels
+	for ; levelNum >= 1; levelNum-- {
+		level := strconv.Itoa(levelNum)
+		maxFilename := findSSTableFilename(level)
+		maxFilenameNum, _ := strconv.Atoi(maxFilename)
+		filenameNum := maxFilenameNum - 1
+		for ; filenameNum > 0; filenameNum-- {
+			filename := strconv.Itoa(filenameNum)
+			table := readSSTable(filename, level)
+			found, value, timestamp := table.QueryRecord(key)
+			if oldTimestamp == "" && found {
+				oldTimestamp = timestamp
+				found = true
+				oldValue = value
+			} else if oldTimestamp != "" && found {
+				if timestamp > oldTimestamp {
+					oldValue = value
+					found = true
+				}
+			}
+		}
+	}
+	return
 }
 
 // Helper functions
