@@ -19,7 +19,7 @@ type SSTable struct {
 	filterFilename  string
 }
 
-func NewSSTable(data MemTable, filename string) (table *SSTable) {
+func NewSSTable(data MemoryTable, filename string) (table *SSTable) {
 	baseFilename := "system/data/sstable/usertable-data-ic-" + filename + "-lev1-"
 	table = &SSTable{
 		generalFilename: baseFilename,
@@ -29,7 +29,7 @@ func NewSSTable(data MemTable, filename string) (table *SSTable) {
 		filterFilename:  baseFilename + "Filter.gob",
 	}
 
-	bloomFilter := CreateBF(data.Size(), 2)
+	bloomFilter := CreateBF(data.CurrentSize(), 2)
 	keys := make([]string, 0)
 	offsets := make([]uint, 0)
 	values := make([][]byte, 0)
@@ -45,7 +45,7 @@ func NewSSTable(data MemTable, filename string) (table *SSTable) {
 
 	// Write file length
 	fileLenBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(fileLenBytes, uint64(data.Size()))
+	binary.LittleEndian.PutUint64(fileLenBytes, uint64(data.CurrentSize()))
 	bytesWritten, err := writer.Write(fileLenBytes)
 	currentOffset += uint(bytesWritten)
 	if err != nil {
@@ -58,7 +58,7 @@ func NewSSTable(data MemTable, filename string) (table *SSTable) {
 	}
 
 	// Iterate over data and write to SSTable file
-	for node := data.data.head.Next[0]; node != nil; node = node.Next[0] {
+	for node := data.skipList.head.NextNodes[0]; node != nil; node = node.NextNodes[0] {
 		key, value := node.Key, node.Value
 		keys = append(keys, key)
 		offsets = append(offsets, currentOffset)
