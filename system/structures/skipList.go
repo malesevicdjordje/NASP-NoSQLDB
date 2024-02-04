@@ -1,6 +1,10 @@
 package structures
 
-import "time"
+import (
+	"hash/crc32"
+	"math/rand"
+	"time"
+)
 
 type SkipList struct {
 	maxLvl  int
@@ -16,8 +20,56 @@ func CreateSkipList(maxLevel int) *SkipList {
 		Tombstone: false,
 		Key:       "head",
 		Value:     nil,
-		Next:      make([]*Element, maxLevel+1),
+		NextNodes: make([]*Element, maxLevel+1),
 	}
 	skipList := SkipList{maxLevel, 1, 1, &root}
 	return &skipList
+}
+
+func CRC32(data []byte) uint32 {
+	return crc32.ChecksumIEEE(data)
+}
+
+func (skipList *SkipList) generateLevel() int {
+	level := 0
+
+	for rand.Int31n(2) == 1 && level <= skipList.maxLvl {
+		level++
+	}
+
+	if level > skipList.currLvl {
+		skipList.currLvl = level
+	}
+
+	return level
+}
+
+func (skipList *SkipList) Insert(key string, value []byte, isTombstone bool) *Element {
+	level := skipList.generateLevel()
+	node := &Element{
+		Checksum:  CRC32([]byte(key)),
+		Timestamp: time.Now().String(),
+		Tombstone: isTombstone,
+		Key:       key,
+		Value:     value,
+		NextNodes: make([]*Element, level+1),
+	}
+
+	for i := skipList.currLvl - 1; i >= 0; i-- {
+		current := skipList.head
+		next := current.NextNodes[i]
+
+		for next != nil && next.Key <= key {
+			current = next
+			next = current.NextNodes[i]
+		}
+
+		if i <= level {
+			skipList.size++
+			node.NextNodes[i] = next
+			current.NextNodes[i] = node
+		}
+	}
+
+	return node
 }
