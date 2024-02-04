@@ -3,6 +3,7 @@ package structures
 import (
 	"bufio"
 	"encoding/binary"
+	"log"
 	"os"
 )
 
@@ -90,4 +91,22 @@ func FindSummaryByKey(targetKey, filename string) (found bool, offset int64) {
 		}
 	}
 	return
+}
+
+func WriteSummaryToFile(keys []string, offsets []uint, filename string) {
+	file, err := os.Create(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+
+	fileLen := uint64(len(keys))
+	fileLenBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(fileLenBytes, fileLen)
+	_, err = writer.Write(fileLenBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
