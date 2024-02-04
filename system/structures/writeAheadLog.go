@@ -91,3 +91,33 @@ func (wal *WriteAheadLog) CurrentSegment() *WalSegment {
 func (wal *WriteAheadLog) Path() string {
 	return wal.path
 }
+
+func NewWriteAheadLog(path string) *WriteAheadLog {
+	wal := WriteAheadLog{
+		path:           path,
+		lowWaterMark:   LowWaterMark,
+		segmentSize:    SegmentCapacity,
+		segmentNames:   make(map[uint64]string),
+		segments:       make([]*WalSegment, 0),
+		currentSegment: &WalSegment{index: 0, data: nil, size: 0, capacity: SegmentCapacity},
+	}
+	return &wal
+}
+
+func (wal *WriteAheadLog) PersistCurrentSegment() {
+	wal.currentSegment.Persist(wal.path)
+	wal.segmentNames[wal.currentSegment.index] = "wal" + strconv.FormatUint(wal.currentSegment.index, 10) + ".log"
+}
+
+func (wal *WriteAheadLog) CreateNewSegment() {
+	newSegment := WalSegment{
+		index:    wal.currentSegment.index + 1,
+		data:     make([]byte, 0, SegmentCapacity),
+		size:     0,
+		capacity: wal.currentSegment.capacity,
+	}
+	wal.PersistCurrentSegment()
+	wal.segments = append(wal.segments, &newSegment)
+	wal.currentSegment = &newSegment
+	wal.PersistCurrentSegment()
+}
