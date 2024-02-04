@@ -10,8 +10,8 @@ import (
 
 // Index defines an interface for basic indexing operations.
 type Index interface {
-	Add(key string, offset uint)
 	Search(key string, startOffset int64) (found bool, dataOffset int64)
+	Add(key string, offset uint)
 	WriteToFile() (keys []string, offsets []uint)
 }
 
@@ -31,12 +31,6 @@ func NewSimpleIndex(keys []string, offsets []uint, fileName string) *SimpleIndex
 		index.Add(key, offsets[i])
 	}
 	return &index
-}
-
-// Add adds a key and its corresponding offset to the index.
-func (index *SimpleIndex) Add(key string, offset uint) {
-	index.Keys = append(index.Keys, key)
-	index.Offsets = append(index.Offsets, offset)
 }
 
 // Search finds a key in the index and returns its existence status and data offset.
@@ -101,6 +95,12 @@ func (index *SimpleIndex) Search(key string, startOffset int64) (found bool, dat
 	}
 
 	return
+}
+
+// Add adds a key and its corresponding offset to the index.
+func (index *SimpleIndex) Add(key string, offset uint) {
+	index.Keys = append(index.Keys, key)
+	index.Offsets = append(index.Offsets, offset)
 }
 
 // WriteToFile writes the index data to a file and returns keys and offsets.
