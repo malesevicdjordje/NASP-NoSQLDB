@@ -2,11 +2,13 @@ package structures
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"hash/crc32"
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 const (
@@ -120,4 +122,45 @@ func (wal *WriteAheadLog) CreateNewSegment() {
 	wal.segments = append(wal.segments, &newSegment)
 	wal.currentSegment = &newSegment
 	wal.PersistCurrentSegment()
+}
+
+func (wal *WriteAheadLog) PutElement(elem *Element) bool {
+	crc := make([]byte, CrcSize)
+	binary.LittleEndian.PutUint32(crc, elem.Checksum)
+	timestamp := make([]byte, TimestampSize)
+	binary.LittleEndian.PutUint64(timestamp, uint64(time.Now().Unix()))
+	tombstone := make([]byte, TombstoneSize)
+	switch elem.Tombstone {
+	case true:
+		tombstone = []byte{1}
+	case false:
+		tombstone = []byte{0}
+	}
+	keySize := make([]byte, KeySizeSize)
+	valueSize := make([]byte, ValueSizeSize)
+	binary.LittleEndian.PutUint64(keySize, uint64(len(elem.Key)))
+	binary.LittleEndian.PutUint64(valueSize, uint64(len(elem.Value)))
+
+	key := []byte(elem.Key)
+	value := elem.Value
+
+	elemData := []byte{}
+	elemData = append(elemData, crc...)
+	elemData = append(elemData, timestamp...)
+	elemData = append(elemData, tombstone...)
+	elemData = append(elemData, keySize...)
+	elemData = append(elemData, valueSize...)
+	elemData = append(elemData, key...)
+	elemData = append(elemData, value...)
+
+	start := 0
+	offset := 0
+	for offset >= 0 {
+		offset = wal.CurrentSegment().AppendData(elemData[start:])
+		if offset != -1 {
+			wal.CreateNewSegment()
+			start += offset
+		}
+	}
+	return true
 }
