@@ -1,5 +1,7 @@
 package structures
 
+import "fmt"
+
 type CacheNode struct {
 	Key      string
 	Value    []byte
@@ -64,6 +66,40 @@ func (cache *LRUCache) Put(key string, value []byte) {
 
 	// Add the new node to the head of the list
 	cache.addNodeToHead(node)
+}
+
+func (cache *LRUCache) Get(key string) (bool, []byte) {
+	if value, exists := cache.values[key]; exists {
+		// Move accessed node to the head of the list
+		cache.moveNodeToHead(key)
+		return true, value
+	}
+	return false, nil
+}
+
+func (cache *LRUCache) Delete(key string) bool {
+	if value, exists := cache.values[key]; exists {
+		// Remove node from the list
+		cache.removeNode(key, value)
+		return true
+	}
+	return false
+}
+
+func (cache *LRUCache) Print() {
+	list := cache.list
+	fmt.Println("\nLinked List:")
+
+	current := list.head
+	for current != nil {
+		fmt.Println(current.Key)
+		current = current.Next
+	}
+
+	fmt.Println("\nMap:")
+	for key, value := range cache.values {
+		fmt.Printf("Key: %s, Value: %s\n", key, string(value))
+	}
 }
 
 // Helper functions
@@ -138,4 +174,36 @@ func (cache *LRUCache) addNodeToHead(node *CacheNode) {
 	}
 
 	list.size++
+}
+
+func (cache *LRUCache) removeNode(key string, value []byte) {
+	list := cache.list
+	current := list.head
+
+	for current != nil {
+		if current.Key == key {
+			// Remove the node from the list
+			if current.Next != nil {
+				current.Next.Previous = current.Previous
+			} else {
+				// Update the tail pointer if the node is the tail
+				list.tail = current.Previous
+			}
+
+			if current.Previous != nil {
+				current.Previous.Next = current.Next
+			} else {
+				// Update the head pointer if the node is the head
+				list.head = current.Next
+			}
+
+			// Remove the node from the map
+			delete(cache.values, key)
+
+			list.size--
+			break
+		}
+
+		current = current.Next
+	}
 }
