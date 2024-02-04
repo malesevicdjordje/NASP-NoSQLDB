@@ -6,5 +6,5 @@ type Element struct {
 	Tombstone bool
 	Key       string
 	Value     []byte
-	Next      []*Element
+	NextNodes []*Element
 }
