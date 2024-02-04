@@ -109,4 +109,37 @@ func WriteSummaryToFile(keys []string, offsets []uint, filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	for i := range keys {
+		key := keys[i]
+		offset := offsets[i]
+
+		keyBytes := []byte(key)
+
+		keyLen := uint64(len(keyBytes))
+		keyLenBytes := make([]byte, 8)
+		binary.LittleEndian.PutUint64(keyLenBytes, keyLen)
+		_, err := writer.Write(keyLenBytes)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = writer.Write(keyBytes)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if i >= 2 {
+			offsetBytes := make([]byte, 8)
+			binary.LittleEndian.PutUint64(offsetBytes, uint64(offset))
+			_, err = writer.Write(offsetBytes)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		err = writer.Flush()
+		if err != nil {
+			return
+		}
+	}
 }
