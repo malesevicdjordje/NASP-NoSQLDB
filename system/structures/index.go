@@ -15,3 +15,18 @@ type SimpleIndex struct {
 	Offsets       []uint
 	FileName      string
 }
+
+// NewSimpleIndex creates a new SimpleIndex instance.
+func NewSimpleIndex(keys []string, offsets []uint, fileName string) *SimpleIndex {
+	index := SimpleIndex{FileName: fileName}
+	for i, key := range keys {
+		index.Add(key, offsets[i])
+	}
+	return &index
+}
+
+// Add adds a key and its corresponding offset to the index.
+func (index *SimpleIndex) Add(key string, offset uint) {
+	index.Keys = append(index.Keys, key)
+	index.Offsets = append(index.Offsets, offset)
+}
